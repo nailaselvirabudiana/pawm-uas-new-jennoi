@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Award, BookOpen, Home } from 'lucide-react-native';
+import { Award, BookOpen, Home, Trophy } from 'lucide-react-native';
 
 export default function TabsLayout() {
   return (
@@ -29,6 +29,13 @@ export default function TabsLayout() {
         options={{
           title: 'Materi',
           tabBarIcon: ({ color }) => <BookOpen size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="quiz"
+        options={{
+          title: 'Quiz',
+          tabBarIcon: ({ color }) => <Trophy size={24} color={color} />,
         }}
       />
       <Tabs.Screen
