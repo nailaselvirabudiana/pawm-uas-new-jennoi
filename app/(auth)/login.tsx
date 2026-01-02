@@ -84,7 +84,7 @@ const router = useRouter();
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Belum punya akun?</Text>
-          <Pressable>
+          <Pressable onPress={() => router.push("/(auth)/signup")}>
             <Text style={styles.footerLink}>Daftar sekarang</Text>
           </Pressable>
         </View>
