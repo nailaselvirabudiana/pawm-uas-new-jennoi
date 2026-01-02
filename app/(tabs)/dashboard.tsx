@@ -1,5 +1,5 @@
-import { LinearGradient } from 'expo-linear-gradient'; // Gunakan versi Expo
-import { useRouter } from 'expo-router'; // Hook untuk navigasi Expo
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { BookOpen, LogOut } from 'lucide-react-native';
 import React from 'react';
 import {
@@ -9,15 +9,25 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  ActivityIndicator
 } from 'react-native';
+import { useAuth } from '@/hooks/useAuth';
+import { useCourseProgress } from '@/hooks/useCourseProgress';
 
-// Komponen utama harus EXPORT DEFAULT
 export default function Dashboard() {
   const router = useRouter();
+  const { profile, signOut, loading: authLoading } = useAuth();
+  const { courseProgress, loading: progressLoading } = useCourseProgress();
 
-  // Data dummy (biasanya ini datang dari props atau global state)
-  const courseProgress = { 'Ejaan': 0, 'Tata Kata': 0, 'Tata Kalimat': 0 };
+  const handleLogout = async () => {
+    try {
+      await signOut(); 
+      router.replace('/(auth)/login'); 
+    } catch (error) {
+      console.error("Gagal logout:", error);
+    }
+  };
 
   const courses = [
     {
@@ -43,6 +53,14 @@ export default function Dashboard() {
     },
   ];
 
+  if (authLoading || progressLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -66,17 +84,18 @@ export default function Dashboard() {
             />
             <View style={{ flex: 1 }}>
               <Text style={styles.subtitle}>Logged in user</Text>
-              <Text style={styles.userName}>Jennoi</Text>
+              <Text style={styles.userName}>{profile?.full_name || profile?.email || 'User'}</Text>
             </View>
 
             <TouchableOpacity
-              onPress={() => router.replace('/(auth)/login')}
+              onPress={handleLogout}
               activeOpacity={0.8}
               style={styles.logoutBtn}
             >
               <LogOut size={16} color="#DC2626" />
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
+
           </View>
 
           <Text style={styles.welcomeText}>Welcome back!</Text>

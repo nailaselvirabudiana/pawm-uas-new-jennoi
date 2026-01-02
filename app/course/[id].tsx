@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BookOpen, CheckCircle, ChevronLeft, MoreVertical } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useCourseProgress } from '@/hooks/useCourseProgress';
 import {
     Alert,
     SafeAreaView,
@@ -13,6 +14,22 @@ import {
 } from 'react-native';
 
 export default function CourseContent() {
+  const { updateProgress } = useCourseProgress();
+
+  const handleCompleteReading = async () => {
+    if (!isCompleted) {
+      setIsCompleted(true);
+      
+      try {
+        // Update progress to 100% when completed
+        await updateProgress(courseData.title, 100);
+        Alert.alert("Materi Selesai! 🎉", "Bagus! Kamu telah menyelesaikan materi " + courseData.title);
+      } catch (error) {
+        console.error('Error updating progress:', error);
+      }
+    }
+  };
+
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const [isCompleted, setIsCompleted] = useState(false);
@@ -91,13 +108,6 @@ export default function CourseContent() {
   };
 
   const courseData = getCourseData();
-
-  const handleCompleteReading = () => {
-    if (!isCompleted) {
-      setIsCompleted(true);
-      Alert.alert("Materi Selesai! 🎉", "Bagus! Kamu telah menyelesaikan materi " + courseData.title);
-    }
-  };
 
   return (
     <View style={styles.container}>

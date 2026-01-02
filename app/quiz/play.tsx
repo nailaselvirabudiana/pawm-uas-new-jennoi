@@ -121,25 +121,52 @@ export default function QuizPlayScreen() {
     setSelectedAnswers((prev: any) => ({ ...prev, [currentQ.id]: ans }));
   };
 
-  const next = () => {
-    if (currentIdx < questions.length - 1) {
-      setCurrentIdx(currentIdx + 1);
-    } else {
-      let score = 0;
-      questions.forEach(q => {
-        const isCorrect = JSON.stringify(selectedAnswers[q.id]) === JSON.stringify(q.correctAnswer);
-        if (isCorrect) score += (100 / questions.length);
+  const { saveQuizResult } = useQuizHistory();
+  
+  const next = async () => {
+  if (currentIdx < questions.length - 1) {
+    setCurrentIdx(currentIdx + 1);
+  } else {
+    let score = 0;
+    const answers: any[] = [];
+    
+    questions.forEach(q => {
+      const isCorrect = JSON.stringify(selectedAnswers[q.id]) === JSON.stringify(q.correctAnswer);
+      if (isCorrect) score += (100 / questions.length);
+      
+      answers.push({
+        questionId: q.id,
+        userAnswer: JSON.stringify(selectedAnswers[q.id]),
+        correctAnswer: JSON.stringify(q.correctAnswer),
+        isCorrect
       });
-      router.push({
-        pathname: "/quiz/result",
-        params: {
-          score: Math.round(score),
-          topic: topicName,
-          course: courseName,
-        },
-      });
+    });
+
+    const correctCount = answers.filter(a => a.isCorrect).length;
+    
+    try {
+      await saveQuizResult(
+        String(courseName),
+        String(topicName),
+        Math.round(score),
+        questions.length,
+        correctCount,
+        answers
+      );
+    } catch (error) {
+      console.error('Error saving quiz:', error);
     }
-  };
+
+    router.push({
+      pathname: "/quiz/result",
+      params: {
+        score: Math.round(score),
+        topic: topicName,
+        course: courseName,
+      },
+    });
+  }
+};
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

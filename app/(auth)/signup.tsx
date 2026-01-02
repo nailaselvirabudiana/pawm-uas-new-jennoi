@@ -1,9 +1,108 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, TextInput, View, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { useState } from "react";
+import { 
+  Image, 
+  Pressable, 
+  StyleSheet, 
+  Text, 
+  TextInput, 
+  View, 
+  ScrollView, 
+  KeyboardAvoidingView, 
+  Platform,
+  Alert,
+  ActivityIndicator
+} from "react-native";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { signUp, signInWithGoogle } = useAuth();
+  
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignUp = async () => {
+    // Validasi input
+    if (!fullName.trim()) {
+      Alert.alert("Error", "Mohon isi nama lengkap");
+      return;
+    }
+
+    if (!email.trim()) {
+      Alert.alert("Error", "Mohon isi email");
+      return;
+    }
+
+    if (!password) {
+      Alert.alert("Error", "Mohon isi password");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Error", "Password minimal 6 karakter");
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Error", "Format email tidak valid");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await signUp(email, password, fullName);
+      
+      if (result) {
+        Alert.alert(
+          "Pendaftaran Berhasil! 🎉",
+          "Akun Anda telah dibuat. Silakan login untuk melanjutkan.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(auth)/login")
+            }
+          ]
+        );
+      }
+    } catch (error: any) {
+      console.error("Sign up error:", error);
+      
+      let errorMessage = "Terjadi kesalahan saat mendaftar";
+      
+      if (error.message.includes("already registered")) {
+        errorMessage = "Email sudah terdaftar. Silakan gunakan email lain atau login.";
+      } else if (error.message.includes("Invalid email")) {
+        errorMessage = "Format email tidak valid";
+      } else if (error.message.includes("Password")) {
+        errorMessage = "Password terlalu lemah. Gunakan minimal 6 karakter.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert("Pendaftaran Gagal", errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      router.replace("/(tabs)/dashboard");
+    } catch (error: any) {
+      console.error("Google sign up error:", error);
+      Alert.alert("Pendaftaran Gagal", error.message || "Terjadi kesalahan saat mendaftar dengan Google");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -21,7 +120,6 @@ export default function SignUpScreen() {
             {/* Logo */}
             <View style={styles.logo}>
               <Image
-                // PERBAIKAN PATH: ../../ karena berada di app/(auth)/
                 source={require("../../assets/images/logo_taba1.png")}
                 style={styles.logoImage}
                 resizeMode="contain"
@@ -44,6 +142,9 @@ export default function SignUpScreen() {
                   placeholder="Nama lengkap Anda"
                   placeholderTextColor="rgba(10,10,10,0.5)"
                   style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  editable={!loading}
                 />
               </View>
 
@@ -55,6 +156,9 @@ export default function SignUpScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  editable={!loading}
                 />
               </View>
 
@@ -65,18 +169,25 @@ export default function SignUpScreen() {
                   placeholderTextColor="rgba(10,10,10,0.5)"
                   secureTextEntry
                   style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!loading}
                 />
               </View>
 
               {/* SignUp Button */}
-              <Pressable onPress={() => router.replace("/(auth)/login")}>
+              <Pressable onPress={handleSignUp} disabled={loading}>
                 <LinearGradient
                   colors={["#155DFC", "#9810FA"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.loginButton}
                 >
-                  <Text style={styles.loginText}>Daftar</Text>
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.loginText}>Daftar</Text>
+                  )}
                 </LinearGradient>
               </Pressable>
 
@@ -87,8 +198,12 @@ export default function SignUpScreen() {
                 <View style={styles.line} />
               </View>
 
-              {/* Google Login */}
-              <Pressable style={styles.googleButton}>
+              {/* Google SignUp */}
+              <Pressable 
+                style={styles.googleButton} 
+                onPress={handleGoogleSignUp}
+                disabled={loading}
+              >
                 <Image
                   source={require("../../assets/images/google_icon.png")}
                   style={styles.googleIcon}

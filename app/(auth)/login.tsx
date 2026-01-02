@@ -1,10 +1,45 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-
+import { useState } from "react";
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View, ActivityIndicator } from "react-native";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginScreen() {
-const router = useRouter();
+  const router = useRouter();
+  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleEmailLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Mohon isi email dan password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signInWithEmail(email, password);
+      router.replace("/(tabs)/dashboard");
+    } catch (error: any) {
+      Alert.alert("Login Gagal", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      router.replace("/(tabs)/dashboard");
+    } catch (error: any) {
+      Alert.alert("Login Gagal", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <LinearGradient
       colors={["#2B7FFF", "#AD46FF", "#F6339A"]}
@@ -15,11 +50,11 @@ const router = useRouter();
       <View style={styles.card}>
         {/* Logo */}
         <View style={styles.logo}>
-            <Image
-                source={require("../../assets/images/logo_taba1.png")}
-                style={styles.logoImage}
-                resizeMode="contain"
-            />
+          <Image
+            source={require("../../assets/images/logo_taba1.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Header */}
@@ -38,6 +73,10 @@ const router = useRouter();
               placeholder="nama@email.com"
               placeholderTextColor="rgba(10,10,10,0.5)"
               style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
             />
           </View>
 
@@ -48,18 +87,24 @@ const router = useRouter();
               placeholderTextColor="rgba(10,10,10,0.5)"
               secureTextEntry
               style={styles.input}
+              value={password}
+              onChangeText={setPassword}
             />
           </View>
 
           {/* Login Button */}
-          <Pressable onPress={() => router.replace("/(tabs)/quiz")}>
+          <Pressable onPress={handleEmailLogin} disabled={loading}>
             <LinearGradient
               colors={["#155DFC", "#9810FA"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.loginButton}
             >
-              <Text style={styles.loginText}>Login</Text>
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.loginText}>Login</Text>
+              )}
             </LinearGradient>
           </Pressable>
 
@@ -71,14 +116,14 @@ const router = useRouter();
           </View>
 
           {/* Google Login */}
-          <Pressable style={styles.googleButton}>
+          <Pressable style={styles.googleButton} onPress={handleGoogleLogin} disabled={loading}>
             <Image
-                source={require("../../assets/images/google_icon.png")}
-                style={styles.googleIcon}
-                resizeMode="contain"
+              source={require("../../assets/images/google_icon.png")}
+              style={styles.googleIcon}
+              resizeMode="contain"
             />
             <Text style={styles.googleText}>Login dengan Google</Text>
-            </Pressable>
+          </Pressable>
         </View>
 
         {/* Footer */}
