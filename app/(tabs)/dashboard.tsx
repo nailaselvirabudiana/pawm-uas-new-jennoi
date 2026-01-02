@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient'; // Gunakan versi Expo
 import { useRouter } from 'expo-router'; // Hook untuk navigasi Expo
-import { BookOpen } from 'lucide-react-native';
+import { BookOpen, LogOut } from 'lucide-react-native';
 import React from 'react';
 import {
   Dimensions,
@@ -64,10 +64,19 @@ export default function Dashboard() {
               colors={['#60A5FA', '#C084FC']} 
               style={styles.avatar} 
             />
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.subtitle}>Logged in user</Text>
               <Text style={styles.userName}>Jennoi</Text>
             </View>
+
+            <TouchableOpacity
+              onPress={() => router.replace('/(auth)/login')}
+              activeOpacity={0.8}
+              style={styles.logoutBtn}
+            >
+              <LogOut size={16} color="#DC2626" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.welcomeText}>Welcome back!</Text>
@@ -133,6 +142,8 @@ const styles = StyleSheet.create({
   avatar: { width: 48, height: 48, borderRadius: 24 },
   subtitle: { fontSize: 14, color: '#6B7280' },
   userName: { fontSize: 16, color: '#111827', fontWeight: '500' },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#FEF2F2' },
+  logoutText: { color: '#DC2626', fontWeight: '700', fontSize: 12 },
   welcomeText: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 24 },
   challengeCard: { padding: 24, borderRadius: 20, marginBottom: 24, overflow: 'hidden' },
   badge: { backgroundColor: '#E9D5FF', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 99, alignSelf: 'flex-start', marginBottom: 12 },
