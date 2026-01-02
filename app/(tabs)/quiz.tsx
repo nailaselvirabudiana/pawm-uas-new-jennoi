@@ -1,16 +1,16 @@
-import React from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  Platform,
-} from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
+import React from 'react';
+import {
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function QuizSelection() {
   const router = useRouter();
@@ -61,7 +61,7 @@ export default function QuizSelection() {
           <Text style={styles.title}>Pilih Materi Kuis</Text>
           <Text style={styles.subtitle}>Uji pemahaman Anda dengan kuis</Text>
 
-          <View className="gap-y-4" style={styles.cardContainer}>
+          <View style={styles.cardContainer}>
             {courses.map((course, index) => (
               <TouchableOpacity
                 key={index}
@@ -72,7 +72,6 @@ export default function QuizSelection() {
                     params: { course: course.name },
                   })
                 }
-                className="shadow-lg"
                 style={styles.cardWrapper}
               >
                 <LinearGradient
@@ -151,9 +150,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   cardContainer: {
-    gap: 16,
+    // Using margin on cards for broad RN compatibility ("gap" support can vary)
   },
   cardWrapper: {
+    marginBottom: 16,
     borderRadius: 20,
     ...Platform.select({
       ios: {

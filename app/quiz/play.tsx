@@ -1,18 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  Dimensions,
-  Platform,
-  Alert,
-} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, MoreVertical } from 'lucide-react-native';
+import { ChevronLeft, GripVertical, MoreVertical } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dimensions, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const { width } = Dimensions.get('window');
 
@@ -70,38 +62,63 @@ const ALL_QUIZ_DATA: any = {
 
 export default function QuizPlayScreen() {
   const router = useRouter();
-  const { topic } = useLocalSearchParams();
+  const { topic, course } = useLocalSearchParams<{ topic?: string | string[]; course?: string | string[] }>();
+  const topicName = Array.isArray(topic) ? topic[0] : topic;
+  const courseName = Array.isArray(course) ? course[0] : course;
   
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<any>({});
-  const [dragItems, setDragItems] = useState<string[]>([]);
+  const [dragData, setDragData] = useState<string[]>([]);
+
+  // 1. PINDAHKAN CALLBACK KE SINI (Sebelum return kondisional)
+  const renderDragItem = useCallback(({ item, drag, isActive }: RenderItemParams<string>) => {
+    return (
+      <ScaleDecorator>
+        <TouchableOpacity
+          onLongPress={drag}
+          disabled={isActive}
+          activeOpacity={1}
+          style={[
+            styles.dragItem,
+            isActive ? styles.dragItemActive : styles.dragItemInactive
+          ]}
+        >
+          <GripVertical size={20} color={isActive ? "#6366F1" : "#94A3B8"} />
+          <Text style={[styles.dragText, isActive && { color: '#4338CA' }]}>{item}</Text>
+          <View style={[styles.dragHandleIndicator, isActive && { backgroundColor: '#6366F1' }]} />
+        </TouchableOpacity>
+      </ScaleDecorator>
+    );
+  }, []);
 
   useEffect(() => {
-    const data = ALL_QUIZ_DATA[topic as string] || ALL_QUIZ_DATA['Huruf Kapital'];
+    const data = ALL_QUIZ_DATA[String(topicName)] || ALL_QUIZ_DATA['Huruf Kapital'];
     setQuestions(data);
-    if (data[0].type === 'drag-drop') setDragItems(data[0].dragItems);
-  }, [topic]);
+  }, [topicName]);
 
   useEffect(() => {
-    if (questions[currentIdx]?.type === 'drag-drop') {
-      setDragItems(questions[currentIdx].dragItems);
+    if (questions.length > 0 && questions[currentIdx]?.type === 'drag-drop') {
+      setDragData(questions[currentIdx].dragItems);
+      // Simpan jawaban awal
+      const questionId = questions[currentIdx].id;
+      setSelectedAnswers((prev: any) => ({ ...prev, [questionId]: questions[currentIdx].dragItems }));
     }
-  }, [currentIdx]);
+  }, [currentIdx, questions]);
 
-  if (questions.length === 0) return null;
+  // 2. PINDAHKAN PENGECEKAN KONDISIONAL KE SINI (Setelah semua hook dipanggil)
+  if (questions.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: 'white', textAlign: 'center', marginTop: 50 }}>Loading...</Text>
+      </View>
+    );
+  }
+
   const currentQ = questions[currentIdx];
 
   const handleSelect = (ans: any) => {
-    setSelectedAnswers({ ...selectedAnswers, [currentQ.id]: ans });
-  };
-
-  const handleReorder = (index: number) => {
-    const newOrder = [...dragItems];
-    const item = newOrder.splice(index, 1)[0];
-    newOrder.unshift(item); // Pindahkan ke paling atas
-    setDragItems(newOrder);
-    handleSelect(newOrder);
+    setSelectedAnswers((prev: any) => ({ ...prev, [currentQ.id]: ans }));
   };
 
   const next = () => {
@@ -110,33 +127,39 @@ export default function QuizPlayScreen() {
     } else {
       let score = 0;
       questions.forEach(q => {
-        const userAns = selectedAnswers[q.id];
-        const isCorrect = JSON.stringify(userAns) === JSON.stringify(q.correctAnswer);
+        const isCorrect = JSON.stringify(selectedAnswers[q.id]) === JSON.stringify(q.correctAnswer);
         if (isCorrect) score += (100 / questions.length);
       });
-      router.push({ pathname: "/quiz/result", params: { score: Math.round(score), topic } });
+      router.push({
+        pathname: "/quiz/result",
+        params: {
+          score: Math.round(score),
+          topic: topicName,
+          course: courseName,
+        },
+      });
     }
   };
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#6366F1', '#4338CA']} style={styles.gradient}>
-        <SafeAreaView style={{ flex: 1 }}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}><ChevronLeft color="white" /></TouchableOpacity>
-            <Text style={styles.headerTitle}>{topic}</Text>
-            <MoreVertical color="white" />
-          </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <LinearGradient colors={['#6366F1', '#4338CA']} style={styles.gradient}>
+          <SafeAreaView style={{ flex: 1 }}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()}><ChevronLeft color="white" /></TouchableOpacity>
+              <Text style={styles.headerTitle}>{topicName}</Text>
+              <MoreVertical color="white" />
+            </View>
 
-          <View style={styles.quizInfo}>
-            <Text style={styles.progressText}>Soal {currentIdx + 1}/{questions.length}</Text>
-            <View style={styles.badge}><Text style={styles.badgeText}>{currentQ.type.replace('-', ' ')}</Text></View>
-          </View>
+            <View style={styles.quizInfo}>
+              <Text style={styles.progressText}>Soal {currentIdx + 1}/{questions.length}</Text>
+              <View style={styles.badge}><Text style={styles.badgeText}>{currentQ.type.replace('-', ' ')}</Text></View>
+            </View>
 
-          <Text style={styles.questionText}>{currentQ.question}</Text>
+            <Text style={styles.questionText}>{currentQ.question}</Text>
 
-          <View style={styles.card}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.card}>
               {currentQ.type !== 'drag-drop' ? (
                 <View style={{ gap: 12 }}>
                   {(currentQ.options || ['Benar', 'Salah']).map((opt: string, i: number) => (
@@ -153,55 +176,148 @@ export default function QuizPlayScreen() {
                   ))}
                 </View>
               ) : (
-                <View style={{ gap: 10 }}>
-                  <Text style={styles.dragHint}>Ketuk item untuk menaikkan urutan</Text>
-                  {dragItems.map((item, i) => (
-                    <TouchableOpacity key={i} onPress={() => handleReorder(i)} style={styles.dragItem}>
-                      <Text style={styles.dragText}>{item}</Text>
-                      <View style={styles.indexCircle}><Text style={styles.indexText}>{i + 1}</Text></View>
-                    </TouchableOpacity>
-                  ))}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.dragHint}>Tahan dan geser item untuk mengurutkan</Text>
+                  <DraggableFlatList
+                    data={dragData}
+                    onDragEnd={({ data }) => {
+                      setDragData(data);
+                      handleSelect(data);
+                    }}
+                    keyExtractor={(item) => item}
+                    renderItem={renderDragItem}
+                    containerStyle={{ flex: 1 }}
+                  />
                 </View>
               )}
-            </ScrollView>
 
-            <TouchableOpacity 
-              onPress={next} 
-              disabled={!selectedAnswers[currentQ.id]}
-              style={[styles.nextBtn, !selectedAnswers[currentQ.id] && { opacity: 0.5 }]}
-            >
-              <Text style={styles.nextBtnText}>{currentIdx === questions.length - 1 ? 'Selesai' : 'Lanjut'}</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    </View>
+              <TouchableOpacity 
+                onPress={next} 
+                disabled={!selectedAnswers[currentQ.id]}
+                style={[styles.nextBtn, !selectedAnswers[currentQ.id] && { opacity: 0.5 }]}
+              >
+                <Text style={styles.nextBtnText}>{currentIdx === questions.length - 1 ? 'Selesai' : 'Lanjut'}</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#4338CA' },
   gradient: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, alignItems: 'center' },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    padding: 20, 
+    alignItems: 'center' 
+  },
   headerTitle: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-  quizInfo: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 25, marginBottom: 15 },
+  quizInfo: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 25, 
+    marginBottom: 15 
+  },
   progressText: { color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
-  badge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { color: 'white', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-  questionText: { color: 'white', fontSize: 22, fontWeight: 'bold', paddingHorizontal: 25, marginBottom: 25, lineHeight: 30 },
-  card: { flex: 1, backgroundColor: 'white', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 25 },
-  optBtn: { flexDirection: 'row', alignItems: 'center', padding: 18, borderRadius: 20, borderWidth: 1.5, borderColor: '#F1F5F9' },
+  badge: { 
+    backgroundColor: 'rgba(255,255,255,0.2)', 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 12 
+  },
+  badgeText: { 
+    color: 'white', 
+    fontSize: 10, 
+    fontWeight: 'bold', 
+    textTransform: 'uppercase' 
+  },
+  questionText: { 
+    color: 'white', 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    paddingHorizontal: 25, 
+    marginBottom: 20, 
+    lineHeight: 30 
+  },
+  card: { 
+    flex: 1, 
+    backgroundColor: 'white', 
+    borderTopLeftRadius: 40, 
+    borderTopRightRadius: 40, 
+    padding: 25, 
+    paddingBottom: 40 
+  },
+  optBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 18, 
+    borderRadius: 20, 
+    borderWidth: 1.5, 
+    borderColor: '#F1F5F9' 
+  },
   optBtnActive: { borderColor: '#6366F1', backgroundColor: '#EEF2FF' },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#CBD5E1', marginRight: 12, alignItems: 'center', justifyContent: 'center' },
+  radio: { 
+    width: 20, 
+    height: 20, 
+    borderRadius: 10, 
+    borderWidth: 2, 
+    borderColor: '#CBD5E1', 
+    marginRight: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
   radioActive: { borderColor: '#6366F1' },
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#6366F1' },
   optText: { color: '#475569', fontSize: 15 },
   optTextActive: { color: '#6366F1', fontWeight: 'bold' },
-  dragHint: { textAlign: 'center', color: '#94A3B8', fontSize: 12, marginBottom: 10, fontStyle: 'italic' },
-  dragItem: { backgroundColor: '#F8FAFC', padding: 16, borderRadius: 15, borderLeftWidth: 4, borderLeftColor: '#6366F1', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-  dragText: { color: '#1E293B', fontWeight: '500' },
-  indexCircle: { backgroundColor: '#6366F1', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  indexText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
-  nextBtn: { backgroundColor: '#6366F1', padding: 18, borderRadius: 20, alignItems: 'center', marginTop: 20 },
+  
+  // --- BAGIAN YANG TADI HILANG ---
+  dragHint: { 
+    textAlign: 'center', 
+    color: '#94A3B8', 
+    fontSize: 12, 
+    marginBottom: 15, 
+    fontStyle: 'italic' 
+  },
+  dragItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 18, 
+    borderRadius: 20, 
+    marginBottom: 12, 
+    borderWidth: 1.5,
+  },
+  dragItemInactive: { 
+    backgroundColor: '#F8FAFC', 
+    borderColor: '#E2E8F0' 
+  },
+  dragItemActive: { 
+    backgroundColor: '#EEF2FF', 
+    borderColor: '#6366F1',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+      android: { elevation: 3 }
+    })
+  },
+  dragText: { color: '#1E293B', fontSize: 15, fontWeight: '500', flex: 1, marginLeft: 10 },
+  dragHandleIndicator: { 
+    width: 4, 
+    height: 20, 
+    borderRadius: 2, 
+    backgroundColor: '#E2E8F0' 
+  },
+  // -------------------------------
+
+  nextBtn: { 
+    backgroundColor: '#6366F1', 
+    padding: 18, 
+    borderRadius: 20, 
+    alignItems: 'center', 
+    marginTop: 10 
+  },
   nextBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });
