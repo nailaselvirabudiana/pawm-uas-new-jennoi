@@ -1,146 +1,152 @@
-/*migrasi dari Dashboard.tsx*/
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import {
-  ArrowRight,
-  BookOpen,
-  Layout,
-  LogOut,
-  Target,
-  Trophy
-} from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient'; // Gunakan versi Expo
+import { useRouter } from 'expo-router'; // Hook untuk navigasi Expo
+import { BookOpen } from 'lucide-react-native';
 import React from 'react';
 import {
+  Dimensions,
+  SafeAreaView,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface DashboardProps {
-  onLogout?: () => void;
-  courseProgress?: { [key: string]: number };
-}
-
-export default function DashboardScreen({ 
-  onLogout, 
-  courseProgress = { 'Ejaan': 0, 'Tata Kata': 0, 'Tata Kalimat': 0 } 
-}: DashboardProps) {
+// Komponen utama harus EXPORT DEFAULT
+export default function Dashboard() {
   const router = useRouter();
 
-  // Menghitung rata-rata progres keseluruhan
-  const totalProgress = Object.values(courseProgress).reduce((a, b) => a + b, 0);
-  const averageProgress = Math.round(totalProgress / 3);
+  // Data dummy (biasanya ini datang dari props atau global state)
+  const courseProgress = { 'Ejaan': 0, 'Tata Kata': 0, 'Tata Kalimat': 0 };
+
+  const courses = [
+    {
+      title: 'Ejaan',
+      level: 'Beginner',
+      colors: ['#FACC15', '#FB923C'] as [string, string],
+      icon: '✏️',
+      progress: courseProgress['Ejaan'] || 0,
+    },
+    {
+      title: 'Tata Kata',
+      level: 'Advanced',
+      colors: ['#F472B6', '#EC4899'] as [string, string],
+      icon: '📝',
+      progress: courseProgress['Tata Kata'] || 0,
+    },
+    {
+      title: 'Tata Kalimat',
+      level: 'Intermediate',
+      colors: ['#60A5FA', '#6366F1'] as [string, string],
+      icon: '📖',
+      progress: courseProgress['Tata Kalimat'] || 0,
+    },
+  ];
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Header Section */}
-        <LinearGradient
-          colors={['#4F46E5', '#7C3AED']}
-          className="px-6 pt-8 pb-12 rounded-b-[40px] shadow-lg"
-        >
-          <View className="flex-row justify-between items-center mb-6">
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <View style={styles.iconBox}>
+              <BookOpen size={24} color="white" />
+            </View>
+            <Text style={styles.logoText}>TaBa</Text>
+          </View>
+        </View>
+
+        {/* Profile Section */}
+        <View style={styles.paddingContainer}>
+          <View style={styles.profileRow}>
+            <LinearGradient 
+              colors={['#60A5FA', '#C084FC']} 
+              style={styles.avatar} 
+            />
             <View>
-              <Text className="text-white/80 text-base">Selamat Datang,</Text>
-              <Text className="text-white text-2xl font-bold">Pelajar TaBa! 👋</Text>
-            </View>
-            <TouchableOpacity 
-              onPress={onLogout}
-              className="bg-white/20 p-2 rounded-full"
-            >
-              <LogOut size={20} color="white" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Overall Progress Card */}
-          <View className="bg-white p-6 rounded-3xl shadow-sm">
-            <View className="flex-row justify-between items-center mb-4">
-              <View className="flex-row items-center gap-x-2">
-                <Target size={20} color="#4F46E5" />
-                <Text className="text-gray-800 font-semibold text-base">Total Progres</Text>
-              </View>
-              <Text className="text-indigo-600 font-bold text-lg">{averageProgress}%</Text>
-            </View>
-            <View className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-              <View 
-                className="bg-indigo-500 h-full rounded-full" 
-                style={{ width: `${averageProgress}%` }} 
-              />
+              <Text style={styles.subtitle}>Logged in user</Text>
+              <Text style={styles.userName}>Jennoi</Text>
             </View>
           </View>
-        </LinearGradient>
 
-        {/* Menu Aksi Cepat */}
-        <View className="px-6 -mt-6">
-          <View className="flex-row gap-x-4">
-            <TouchableOpacity 
-              onPress={() => router.push("/course")}
-              className="flex-1 bg-white p-4 rounded-2xl shadow-sm items-center border border-gray-100"
-            >
-              <View className="bg-blue-100 p-3 rounded-full mb-2">
-                <BookOpen size={24} color="#2563EB" />
-              </View>
-              <Text className="text-gray-800 font-medium">Materi</Text>
-            </TouchableOpacity>
+          <Text style={styles.welcomeText}>Welcome back!</Text>
 
-            <TouchableOpacity 
-              onPress={() => router.push("/quiz/selection")}
-              className="flex-1 bg-white p-4 rounded-2xl shadow-sm items-center border border-gray-100"
-            >
-              <View className="bg-purple-100 p-3 rounded-full mb-2">
-                <Trophy size={24} color="#7C3AED" />
-              </View>
-              <Text className="text-gray-800 font-medium">Kuis</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          {/* Today's Challenge Card */}
+          <LinearGradient 
+            colors={['#FDF2F8', '#F5F3FF']} 
+            style={styles.challengeCard}
+          >
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>reminder</Text>
+            </View>
+            <Text style={styles.challengeTitle}>Today's challenge</Text>
+            <Text style={styles.challengeDesc}>Pelajari materi baru</Text>
+            <View style={styles.decoCircle} />
+          </LinearGradient>
 
-        {/* Ringkasan Materi */}
-        <View className="px-6 mt-8">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-gray-900 text-lg font-bold">Lanjutkan Belajar</Text>
-            <TouchableOpacity onPress={() => router.push("/course")}>
-              <Text className="text-indigo-600 font-medium">Lihat Semua</Text>
-            </TouchableOpacity>
-          </View>
-
-          {['Ejaan', 'Tata Kata', 'Tata Kalimat'].map((materi) => (
-            <TouchableOpacity 
-              key={materi}
-              onPress={() =>
-                router.push({
-                  pathname: '../course/[id]',
-                  params: { id: materi },
-                })
-              }
-              className="bg-white p-4 rounded-2xl mb-4 flex-row items-center shadow-sm border border-gray-50"
-            >
-              <View className="w-12 h-12 bg-indigo-50 rounded-xl items-center justify-center mr-4">
-                <Layout size={24} color="#4F46E5" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-gray-900 font-bold text-base mb-1">{materi}</Text>
-                <View className="flex-row items-center gap-x-2">
-                  <View className="flex-1 bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                    <View 
-                      className="bg-indigo-400 h-full rounded-full" 
-                      style={{ width: `${courseProgress[materi] || 0}%` }} 
-                    />
+          {/* Your Courses */}
+          <Text style={styles.sectionTitle}>Your courses</Text>
+          <View style={styles.courseGrid}>
+            {courses.map((course) => (
+              <TouchableOpacity 
+                key={course.title}
+                style={styles.courseCardWrapper}
+                onPress={() =>
+                  router.push({
+                    pathname: '../course/[id]',
+                    params: { id: course.title },
+                  })
+                }
+              >
+                <LinearGradient colors={course.colors} style={styles.courseCard}>
+                  <View>
+                    <Text style={styles.courseIcon}>{course.icon}</Text>
+                    <Text style={styles.courseTitle}>{course.title}</Text>
+                    <Text style={styles.courseLevel}>{course.level}</Text>
                   </View>
-                  <Text className="text-gray-500 text-xs">{courseProgress[materi] || 0}%</Text>
-                </View>
-              </View>
-              <ArrowRight size={18} color="#94A3B8" className="ml-2" />
-            </TouchableOpacity>
-          ))}
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${course.progress}%` }]} />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-
-        {/* Spacer bawah */}
-        <View className="h-20" />
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const { width } = Dimensions.get('window');
+const cardWidth = (width - 48 - 16) / 2;
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollContent: { paddingBottom: 40 },
+  header: { paddingVertical: 16, alignItems: 'center' },
+  logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBox: { width: 40, height: 40, backgroundColor: '#2563EB', borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  logoText: { fontSize: 20, color: '#1E3A8A', fontWeight: 'bold' },
+  paddingContainer: { paddingHorizontal: 24 },
+  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+  avatar: { width: 48, height: 48, borderRadius: 24 },
+  subtitle: { fontSize: 14, color: '#6B7280' },
+  userName: { fontSize: 16, color: '#111827', fontWeight: '500' },
+  welcomeText: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 24 },
+  challengeCard: { padding: 24, borderRadius: 20, marginBottom: 24, overflow: 'hidden' },
+  badge: { backgroundColor: '#E9D5FF', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 99, alignSelf: 'flex-start', marginBottom: 12 },
+  badgeText: { color: '#7E22CE', fontSize: 12, fontWeight: '500' },
+  challengeTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  challengeDesc: { fontSize: 14, color: '#9333EA' },
+  decoCircle: { position: 'absolute', right: -20, bottom: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: '#8B5CF6', opacity: 0.1 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#111827', marginBottom: 16 },
+  courseGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  courseCardWrapper: { width: cardWidth },
+  courseCard: { borderRadius: 20, padding: 16, height: cardWidth, justifyContent: 'space-between' },
+  courseIcon: { fontSize: 24, marginBottom: 8 },
+  courseTitle: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  courseLevel: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
+  progressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 3, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: 'white', borderRadius: 3 },
+});
