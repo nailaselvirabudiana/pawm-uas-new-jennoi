@@ -1,92 +1,210 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
 import React from 'react';
 import {
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronLeft } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
-export default function QuizTabScreen() {
+export default function QuizSelection() {
   const router = useRouter();
 
   const courses = [
     {
       name: 'Ejaan',
       level: 'Beginner',
-      colors: ['#FACC15', '#FB923C'] as const, // from-yellow-400 to-orange-400
+      colors: ['#FACC15', '#FB923C'] as [string, string],
       icon: '✏️',
     },
     {
       name: 'Tata Kata',
       level: 'Advanced',
-      colors: ['#F472B6', '#EC4899'] as const, // from-pink-400 to-pink-500
+      colors: ['#F472B6', '#EC4899'] as [string, string],
       icon: '📝',
     },
     {
       name: 'Tata Kalimat',
       level: 'Intermediate',
-      colors: ['#60A5FA', '#6366F1'] as const, // from-blue-400 to-indigo-500
+      colors: ['#60A5FA', '#6366F1'] as [string, string],
       icon: '📖',
     },
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
-      {/* Header */}
-      <View className="bg-white px-6 py-4 border-b border-gray-100 flex-row items-center gap-x-4">
-        <TouchableOpacity onPress={() => router.replace("/(tabs)/dashboard")}>
-          <ChevronLeft size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text className="text-gray-900 text-xl font-bold">Quiz</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <ChevronLeft size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Quiz</Text>
+          <View style={{ width: 40 }} /> {/* Spacer untuk menyeimbangkan judul */}
+        </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        className="px-6 py-6"
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        <Text className="text-gray-900 text-2xl font-bold mb-1">Pilih Materi Kuis</Text>
-        <Text className="text-gray-600 text-base mb-6">Uji pemahaman Anda dengan kuis</Text>
+        {/* Content Section */}
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Text style={styles.title}>Pilih Materi Kuis</Text>
+          <Text style={styles.subtitle}>Uji pemahaman Anda dengan kuis</Text>
 
-        <View className="gap-y-4">
-          {courses.map((course, index) => (
-            <TouchableOpacity
-              key={index}
-              activeOpacity={0.9}
-              onPress={() => router.push({
-                pathname: "/quiz/selection",
-                params: { course: course.name }
-              })}
-              className="shadow-lg"
-            >
-              <LinearGradient
-                colors={course.colors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="rounded-[28px] p-6"
+          <View className="gap-y-4" style={styles.cardContainer}>
+            {courses.map((course, index) => (
+              <TouchableOpacity
+                key={index}
+                activeOpacity={0.9}
+                onPress={() =>
+                  router.push({
+                    pathname: "/quiz/selection",
+                    params: { course: course.name },
+                  })
+                }
+                className="shadow-lg"
+                style={styles.cardWrapper}
               >
-                <View className="flex-row items-center justify-between">
-                  <View>
-                    <View className="flex-row items-center gap-x-3 mb-3">
-                      <Text className="text-4xl">{course.icon}</Text>
-                      <Text className="text-white text-2xl font-bold">{course.name}</Text>
-                    </View>
-                    <View className="bg-white/30 self-start px-4 py-1.5 rounded-full">
-                      <Text className="text-white text-xs font-bold tracking-wider uppercase">
-                        {course.level}
-                      </Text>
+                <LinearGradient
+                  colors={course.colors}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardGradient}
+                >
+                  <View style={styles.cardContent}>
+                    <View style={styles.infoRow}>
+                      <View style={styles.iconBox}>
+                        <Text style={styles.iconText}>{course.icon}</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.courseName}>{course.name}</Text>
+                        <View style={styles.levelBadge}>
+                          <Text style={styles.levelText}>{course.level}</Text>
+                        </View>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 100,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 24,
+  },
+  cardContainer: {
+    gap: 16,
+  },
+  cardWrapper: {
+    borderRadius: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  cardGradient: {
+    borderRadius: 20,
+    padding: 24,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  iconBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 12,
+    borderRadius: 16,
+  },
+  iconText: {
+    fontSize: 28,
+  },
+  courseName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  levelBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 99,
+    alignSelf: 'flex-start',
+  },
+  levelText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});

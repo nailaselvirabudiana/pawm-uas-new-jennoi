@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  Alert 
-} from 'react-native';
-import { ChevronLeft, BookOpen, MoreVertical, CheckCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { BookOpen, CheckCircle, ChevronLeft, MoreVertical } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 export default function CourseContent() {
   const router = useRouter();

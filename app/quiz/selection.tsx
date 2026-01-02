@@ -1,26 +1,32 @@
-// migrasi dari QuizSelection.tsx
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BookOpen, ChevronLeft, ClipboardList } from 'lucide-react-native';
 import React from 'react';
 import {
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
+const cardWidth = (width - 48 - 15) / 2; // (Layar - Padding Horizontal - Gap) / 2
 
 export default function QuizSelectionScreen() {
   const router = useRouter();
-  const { course } = useLocalSearchParams(); // Mengambil parameter kursus dari URL
+  const { course } = useLocalSearchParams<{ course?: string | string[] }>();
+  const courseName = Array.isArray(course) ? course[0] : course;
 
   const getCourseData = () => {
-    if (course === 'Ejaan') {
+    if (courseName === 'Ejaan') {
       return {
         title: 'Ejaan',
         level: 'Beginner',
-        colors: ['#FACC15', '#FB923C'] as const,
+        colors: ['#FACC15', '#FB923C'] as [string, string],
         topics: [
           { name: 'Huruf Kapital', subtitle: 'Penggunaan Huruf Kapital', icon: '📄', bgColor: '#FFEDD5', textColor: '#EA580C' },
           { name: 'Penulisan Kata', subtitle: 'Kata Dasar & Berimbuhan', icon: '✏️', bgColor: '#FCE7F3', textColor: '#DB2777' },
@@ -30,11 +36,11 @@ export default function QuizSelectionScreen() {
           { name: 'Singkatan', subtitle: 'Akronim & Abbreviasi', icon: '📝', bgColor: '#E0E7FF', textColor: '#4F46E5' },
         ],
       };
-    } else if (course === 'Tata Kata') {
+    } else if (courseName === 'Tata Kata') {
       return {
         title: 'Tata Kata',
         level: 'Advanced',
-        colors: ['#F472B6', '#EC4899'] as const,
+        colors: ['#F472B6', '#EC4899'] as [string, string],
         topics: [
           { name: 'Pengantar Tata Kata', subtitle: 'Dasar Morfologi', icon: '📚', bgColor: '#FCE7F3', textColor: '#DB2777' },
           { name: 'Kata Benda', subtitle: 'Nomina', icon: '📦', bgColor: '#F3E8FF', textColor: '#9333EA' },
@@ -46,7 +52,7 @@ export default function QuizSelectionScreen() {
       return {
         title: 'Tata Kalimat',
         level: 'Intermediate',
-        colors: ['#60A5FA', '#6366F1'] as const,
+        colors: ['#60A5FA', '#6366F1'] as [string, string],
         topics: [
           { name: 'Pengantar Kalimat', subtitle: 'Dasar Sintaksis', icon: '📖', bgColor: '#DBEAFE', textColor: '#2563EB' },
           { name: 'Pola Kalimat', subtitle: 'S-P-O-K', icon: '📝', bgColor: '#E0E7FF', textColor: '#4F46E5' },
@@ -60,70 +66,68 @@ export default function QuizSelectionScreen() {
   const courseData = getCourseData();
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header with Gradient */}
         <LinearGradient
           colors={courseData.colors}
-          className="px-6 pt-4 pb-8 rounded-b-[40px]"
+          style={styles.headerGradient}
         >
-          <View className="flex-row items-center justify-between mb-6">
-            <TouchableOpacity onPress={() => router.back()}>
+          <View style={styles.navRow}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerIconButton}>
               <ChevronLeft size={24} color="white" />
             </TouchableOpacity>
-            <Text className="text-white font-semibold text-lg">Quiz</Text>
-            <TouchableOpacity>
+            <Text style={styles.headerTitle}>Quiz</Text>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/course/[id]',
+                  params: { id: courseData.title },
+                })
+              }
+            >
               <BookOpen size={24} color="white" />
             </TouchableOpacity>
           </View>
 
-          <View>
-            <Text className="text-white text-3xl font-bold mb-2">{courseData.title}</Text>
-            <View className="bg-white/30 self-start px-3 py-1 rounded-full">
-              <Text className="text-white text-xs font-medium">{courseData.level}</Text>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>{courseData.title}</Text>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>{courseData.level}</Text>
             </View>
           </View>
 
-          <View className="mt-6 flex-row items-center gap-x-2">
+          <View style={styles.topicInfoRow}>
             <ClipboardList size={16} color="rgba(255,255,255,0.8)" />
-            <Text className="text-white/80 text-sm">
+            <Text style={styles.topicCountText}>
               {courseData.topics.length} Topik Kuis Tersedia
             </Text>
           </View>
         </LinearGradient>
 
-        {/* Topics Grid */}
-        <View className="px-6 py-8">
-          <Text className="text-gray-900 text-xl font-bold mb-6">Pilih Topik Kuis</Text>
+        {/* Topics Section */}
+        <View style={styles.topicsContainer}>
+          <Text style={styles.sectionTitle}>Pilih Topik Kuis</Text>
           
-          <View className="flex-row flex-wrap justify-between">
+          <View style={styles.grid}>
             {courseData.topics.map((topic, index) => (
               <TouchableOpacity
                 key={index}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
                 onPress={() => router.push({
                   pathname: "/quiz/play",
                   params: { topic: topic.name, course: courseData.title }
                 })}
-                style={{ width: '47%' }}
-                className="bg-white rounded-[32px] p-5 mb-5 shadow-sm border border-gray-100 items-start"
+                style={styles.card}
               >
-                <View 
-                  style={{ backgroundColor: topic.bgColor }}
-                  className="w-12 h-12 rounded-2xl items-center justify-center mb-4"
-                >
-                  <Text className="text-2xl">{topic.icon}</Text>
+                <View style={[styles.iconWrapper, { backgroundColor: topic.bgColor }]}>
+                  <Text style={styles.topicEmoji}>{topic.icon}</Text>
                 </View>
-                <Text 
-                  numberOfLines={1} 
-                  className="text-gray-900 font-bold text-sm mb-1"
-                >
+                <Text numberOfLines={1} style={styles.topicName}>
                   {topic.name}
                 </Text>
-                <Text 
-                  numberOfLines={2} 
-                  className="text-gray-500 text-[10px] leading-4"
-                >
+                <Text numberOfLines={2} style={styles.topicSubtitle}>
                   {topic.subtitle}
                 </Text>
               </TouchableOpacity>
@@ -131,9 +135,130 @@ export default function QuizSelectionScreen() {
           </View>
         </View>
         
-        {/* Spacer untuk Bottom Nav */}
-        <View className="h-20" />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  headerGradient: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  heroContent: {
+    marginTop: 10,
+  },
+  heroTitle: {
+    color: 'white',
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  levelBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  levelText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  topicInfoRow: {
+    marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topicCountText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  topicsContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 24,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  card: {
+    width: cardWidth,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  iconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  topicEmoji: {
+    fontSize: 24,
+  },
+  topicName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  topicSubtitle: {
+    fontSize: 10,
+    color: '#6B7280',
+    lineHeight: 14,
+  },
+  bottomSpacer: {
+    height: 80,
+  },
+});
