@@ -85,21 +85,34 @@ export function useAuth() {
         if (result.type === 'success') {
           const url = Linking.parse(result.url);
           // Handle the OAuth callback
-          const access_token = url.queryParams?.access_token as string;
-          const refresh_token = url.queryParams?.refresh_token as string;
-
-          if (access_token) {
+          const params = parseUrlParams(result.url);
+          const access_token = params.access_token;
+          const refresh_token = params.refresh_token;
+          if (access_token && refresh_token) {
             await supabase.auth.setSession({
               access_token,
               refresh_token: refresh_token || '',
             });
-          }
+          } else {
+            console.log("Token tidak ditemukan di URL:", result.url);
+            }
         }
       }
     } catch (error) {
       console.error('Error signing in with Google:', error);
       throw error;
     }
+  };
+
+  const parseUrlParams = (url: string) => {
+    const params: Record<string, string> = {};
+    // Regex untuk menangkap key=value dari ? maupun #
+    const regex = /[?&#]([^=#]+)=([^&#]*)/g;
+    let match;
+    while ((match = regex.exec(url))) {
+      params[match[1]] = decodeURIComponent(match[2]);
+    }
+    return params;
   };
 
   const signInWithEmail = async (email: string, password: string) => {
