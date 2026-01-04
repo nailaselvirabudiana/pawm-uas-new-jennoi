@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BookOpen, LogOut } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   Dimensions,
   SafeAreaView,
@@ -10,15 +10,31 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function Dashboard() {
   const router = useRouter();
   const { profile, signOut, loading: authLoading } = useAuth();
-  const { courseProgress, loading: progressLoading } = useCourseProgress();
+  const { courseProgress, loading: progressLoading, refreshProgress } = useCourseProgress();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Dashboard focused, refreshing progress...');
+      refreshProgress();
+    }, [])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshProgress();
+    setRefreshing(false);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -53,6 +69,8 @@ export default function Dashboard() {
     },
   ];
 
+  console.log('Current course progress:', courseProgress);
+
   if (authLoading || progressLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -63,8 +81,12 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView contentContainerStyle={styles.scrollContent} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
@@ -177,6 +199,8 @@ const styles = StyleSheet.create({
   courseIcon: { fontSize: 24, marginBottom: 8 },
   courseTitle: { color: 'white', fontSize: 16, fontWeight: 'bold' },
   courseLevel: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
+  progressContainer: { gap: 4 },
   progressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: 'white', borderRadius: 3 },
+  progressText: { color: 'white', fontSize: 12, fontWeight: '600', alignSelf: 'flex-end' },
 });

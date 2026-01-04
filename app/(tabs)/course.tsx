@@ -1,29 +1,24 @@
-import React from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  Dimensions,
-  Platform,
-} from 'react-native';
+import { useCourseProgress } from '@/hooks/useCourseProgress';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
+import React from 'react';
+import {
+  Dimensions,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-// Data Mock
-const courseProgress: { [key: string]: number } = {
-  'Ejaan': 0,
-  'Tata Kata': 0,
-  'Tata Kalimat': 0,
-};
-
 export default function CourseListScreen() {
   const router = useRouter();
+  const { courseProgress, loading } = useCourseProgress();
 
   const courses = [
     {

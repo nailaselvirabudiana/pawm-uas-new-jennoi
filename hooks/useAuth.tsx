@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
-import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useState } from 'react';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -99,7 +99,7 @@ export function useAuth() {
         }
       }
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      console.log('Error signing in with Google:', error);
       throw error;
     }
   };
@@ -125,7 +125,7 @@ export function useAuth() {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error signing in:', error);
+      // Error akan di-handle di komponen yang memanggil function ini
       throw error;
     }
   };
@@ -145,7 +145,7 @@ export function useAuth() {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.log('Error signing up:', error);
       throw error;
     }
   };
@@ -155,7 +155,7 @@ export function useAuth() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.log('Error signing out:', error);
       throw error;
     }
   };
@@ -172,7 +172,7 @@ export function useAuth() {
       if (error) throw error;
       await fetchProfile(user.id);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.log('Error updating profile:', error);
       throw error;
     }
   };

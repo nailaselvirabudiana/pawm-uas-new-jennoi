@@ -1,42 +1,79 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BookOpen, CheckCircle, ChevronLeft, MoreVertical } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
 } from 'react-native';
 
 export default function CourseContent() {
-  const { updateProgress } = useCourseProgress();
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const { updateProgress, courseProgress } = useCourseProgress();
+  
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [updating, setUpdating] = useState(false);
+
+  const courseName = Array.isArray(id) ? id[0] : id || 'Ejaan';
+
+  // Check if already completed when component mounts or courseProgress changes
+  useEffect(() => {
+    const progress = courseProgress[courseName] || 0;
+    console.log(`Course ${courseName} progress:`, progress);
+    
+    if (progress >= 100) {
+      setIsCompleted(true);
+    }
+  }, [courseProgress, courseName]);
 
   const handleCompleteReading = async () => {
-    if (!isCompleted) {
+    if (isCompleted || updating) {
+      console.log('Already completed or updating');
+      return;
+    }
+    
+    setUpdating(true);
+    try {
+      console.log('Completing course:', courseName);
+      
+      // Update progress to 100%
+      await updateProgress(courseName, 100);
+      
       setIsCompleted(true);
       
-      try {
-        // Update progress to 100% when completed
-        await updateProgress(courseData.title, 100);
-        Alert.alert("Materi Selesai! 🎉", "Bagus! Kamu telah menyelesaikan materi " + courseData.title);
-      } catch (error) {
-        console.error('Error updating progress:', error);
-      }
+      Alert.alert(
+        "Materi Selesai! 🎉", 
+        `Bagus! Kamu telah menyelesaikan materi ${courseData.title}.`,
+        [
+          {
+            text: "Kerjakan Quiz",
+            onPress: () => {
+              router.push('/(tabs)/quiz');
+            }
+          },
+          {
+            text: "Lanjut Belajar",
+            style: "cancel"
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      Alert.alert('Error', 'Gagal menyimpan progress. Silakan coba lagi.');
+    } finally {
+      setUpdating(false);
     }
   };
 
-  const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
-  const [isCompleted, setIsCompleted] = useState(false);
-
   const getCourseData = () => {
-    const courseName = Array.isArray(id) ? id[0] : id || 'Ejaan';
-
     switch (courseName) {
       case 'Ejaan':
         return {
@@ -108,6 +145,7 @@ export default function CourseContent() {
   };
 
   const courseData = getCourseData();
+  const currentProgress = courseProgress[courseName] || 0;
 
   return (
     <View style={styles.container}>
@@ -127,6 +165,14 @@ export default function CourseContent() {
             <Text style={styles.headerTitleText}>{courseData.title}</Text>
             {isCompleted && <CheckCircle size={32} color="white" />}
           </View>
+          {currentProgress > 0 && (
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: `${currentProgress}%` }]} />
+              </View>
+              <Text style={styles.progressText}>{Math.round(currentProgress)}% selesai</Text>
+            </View>
+          )}
         </SafeAreaView>
       </LinearGradient>
 
@@ -167,15 +213,39 @@ export default function CourseContent() {
               </Text>
               
               {!isCompleted && (
-                <TouchableOpacity onPress={handleCompleteReading} activeOpacity={0.8}>
+                <TouchableOpacity 
+                  onPress={handleCompleteReading} 
+                  activeOpacity={0.8}
+                  disabled={updating}
+                >
                   <LinearGradient colors={courseData.colors} style={styles.completeButton}>
-                    <Text style={styles.completeButtonText}>Selesai Membaca Materi</Text>
+                    {updating ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={styles.completeButtonText}>Selesai Membaca Materi</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+
+              {isCompleted && (
+                <TouchableOpacity 
+                  onPress={() => router.push({
+                    pathname: '/quiz/selection',
+                    params: { course: courseName }
+                  })}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient colors={['#10B981', '#059669']} style={styles.completeButton}>
+                    <Text style={styles.completeButtonText}>Kerjakan Kuis 📝</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               )}
             </View>
           </View>
         </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -216,11 +286,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 5,
+    marginBottom: 16,
   },
   headerTitleText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: 'white',
+  },
+  progressContainer: {
+    marginTop: 8,
+    paddingHorizontal: 5,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: 'white',
+    borderRadius: 4,
+  },
+  progressText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.95,
   },
   contentScroll: {
     flex: 1,
@@ -234,12 +327,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
-    // Shadow untuk iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07,
     shadowRadius: 10,
-    // Shadow untuk Android
     elevation: 4,
   },
   sectionTitle: {
@@ -283,6 +374,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
