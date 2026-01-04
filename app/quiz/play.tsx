@@ -2,76 +2,29 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, GripVertical, MoreVertical } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dimensions, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useQuizHistory } from '@/hooks/useQuizHistory';
+import { useQuestions, Question } from '@/hooks/useQuestions';
 
 const { width } = Dimensions.get('window');
-
-// --- DATABASE SEMUA SOAL ---
-const ALL_QUIZ_DATA: any = {
-  // --- EJAAN ---
-  'Huruf Kapital': [
-    { id: 1, type: 'multiple-choice', question: 'Manakah penulisan huruf kapital yang benar?', options: ['saya tinggal di jakarta', 'Saya tinggal di Jakarta', 'saya Tinggal di jakarta', 'Saya Tinggal Di Jakarta'], correctAnswer: 'Saya tinggal di Jakarta' },
-    { id: 2, type: 'true-false', question: 'Nama hari dan bulan ditulis dengan huruf kapital di awal kata.', correctAnswer: 'Benar' },
-    { id: 3, type: 'drag-drop', question: 'Urutkan kata sesuai penggunaan huruf kapital yang benar (Kapital di urutan atas):', dragItems: ['universitas indonesia', 'Presiden Jokowi', 'jakarta', 'Hari Senin'], correctAnswer: ['Presiden Jokowi', 'Hari Senin', 'universitas indonesia', 'jakarta'] },
-  ],
-  'Penulisan Kata': [
-    { id: 4, type: 'multiple-choice', question: 'Penulisan kata yang benar adalah...', options: ['mem-baca', 'membaca', 'Membaca', 'memBaca'], correctAnswer: 'membaca' },
-    { id: 5, type: 'true-false', question: 'Kata "di rumah" ditulis terpisah, sedangkan "dirumahkan" ditulis serangkai.', correctAnswer: 'Benar' },
-    { id: 6, type: 'drag-drop', question: 'Urutkan proses pembentukan kata dari yang paling sederhana:', dragItems: ['pembelajaran', 'belajar', 'ajar', 'pelajaran'], correctAnswer: ['ajar', 'belajar', 'pelajaran', 'pembelajaran'] },
-  ],
-  'Tanda Baca': [
-    { id: 7, type: 'multiple-choice', question: 'Tanda baca tepat untuk "Apakah kamu sudah makan"', options: ['Titik (.)', 'Koma (,)', 'Tanda Tanya (?)', 'Tanda Seru (!)'], correctAnswer: 'Tanda Tanya (?)' },
-    { id: 8, type: 'true-false', question: 'Tanda koma (,) digunakan untuk memisahkan anak kalimat dari induk kalimat.', correctAnswer: 'Benar' },
-    { id: 9, type: 'drag-drop', question: 'Urutkan tanda baca sesuai kekuatan jeda (Terlemah ke Terkuat):', dragItems: ['Titik (.)', 'Koma (,)', 'Titik Koma (;)', 'Titik Dua (:)'], correctAnswer: ['Koma (,)', 'Titik Koma (;)', 'Titik Dua (:)', 'Titik (.)'] },
-  ],
-  // --- TATA KATA ---
-  'Kata Benda': [
-    { id: 10, type: 'multiple-choice', question: 'Kata yang termasuk kata benda adalah...', options: ['Berlari', 'Buku', 'Cantik', 'Dengan'], correctAnswer: 'Buku' },
-    { id: 11, type: 'true-false', question: 'Kata benda selalu dapat diberi artikel "sang", "si", atau "para".', correctAnswer: 'Salah' },
-    { id: 12, type: 'drag-drop', question: 'Kelompokkan kata benda dari konkret ke abstrak:', dragItems: ['kebahagiaan', 'meja', 'air', 'kebebasan'], correctAnswer: ['meja', 'air', 'kebahagiaan', 'kebebasan'] },
-  ],
-  'Kata Kerja': [
-    { id: 13, type: 'multiple-choice', question: 'Kata kerja yang tepat adalah...', options: ['Rumah', 'Menulis', 'Merah', 'Karena'], correctAnswer: 'Menulis' },
-    { id: 14, type: 'true-false', question: 'Kata kerja transitif memerlukan objek untuk melengkapi maknanya.', correctAnswer: 'Benar' },
-    { id: 15, type: 'drag-drop', question: 'Urutkan kata kerja dari yang paling aktif:', dragItems: ['tidur', 'memukul', 'berlari', 'membaca'], correctAnswer: ['memukul', 'membaca', 'berlari', 'tidur'] },
-  ],
-  'Kata Sifat': [
-    { id: 16, type: 'multiple-choice', question: 'Kata sifat yang menunjukkan warna adalah...', options: ['Besar', 'Cepat', 'Merah', 'Banyak'], correctAnswer: 'Merah' },
-    { id: 17, type: 'true-false', question: 'Kata sifat dapat diberi awalan "ter-" untuk tingkat superlatif.', correctAnswer: 'Benar' },
-    { id: 18, type: 'drag-drop', question: 'Urutkan kata sifat dari tingkat biasa ke superlatif:', dragItems: ['terpintar', 'pintar', 'lebih pintar', 'paling pintar'], correctAnswer: ['pintar', 'lebih pintar', 'paling pintar', 'terpintar'] },
-  ],
-  // --- TATA KALIMAT ---
-  'Pola Kalimat': [
-    { id: 19, type: 'multiple-choice', question: 'Pola kalimat "Andi membaca buku" adalah...', options: ['S-P', 'S-P-O', 'S-P-K', 'S-P-O-K'], correctAnswer: 'S-P-O' },
-    { id: 20, type: 'true-false', question: 'Setiap kalimat lengkap harus memiliki subjek dan predikat.', correctAnswer: 'Benar' },
-    { id: 21, type: 'drag-drop', question: 'Susun menjadi kalimat S-P-O-K yang benar:', dragItems: ['di taman', 'Ani', 'membaca', 'buku'], correctAnswer: ['Ani', 'membaca', 'buku', 'di taman'] },
-  ],
-  'Kalimat Aktif': [
-    { id: 22, type: 'multiple-choice', question: 'Ciri kalimat aktif transitif adalah...', options: ['Tidak ada objek', 'Memiliki objek', 'Ada kata "oleh"', 'Predikat "di-"'], correctAnswer: 'Memiliki objek' },
-    { id: 23, type: 'true-false', question: 'Kalimat aktif selalu menggunakan awalan "me-" pada predikat.', correctAnswer: 'Salah' },
-    { id: 24, type: 'drag-drop', question: 'Susun menjadi kalimat aktif yang benar:', dragItems: ['bola', 'menendang', 'Rudi', 'ke gawang'], correctAnswer: ['Rudi', 'menendang', 'bola', 'ke gawang'] },
-  ],
-  'Kalimat Majemuk': [
-    { id: 25, type: 'multiple-choice', question: 'Kata hubung kalimat majemuk setara adalah...', options: ['karena', 'dan', 'jika', 'agar'], correctAnswer: 'dan' },
-    { id: 26, type: 'true-false', question: 'Kalimat majemuk bertingkat memiliki hubungan setara antar klausa.', correctAnswer: 'Salah' },
-    { id: 27, type: 'drag-drop', question: 'Urutkan kata hubung dari sebab-akibat ke tujuan:', dragItems: ['agar', 'sehingga', 'karena', 'supaya'], correctAnswer: ['karena', 'sehingga', 'agar', 'supaya'] },
-  ],
-};
 
 export default function QuizPlayScreen() {
   const router = useRouter();
   const { topic, course } = useLocalSearchParams<{ topic?: string | string[]; course?: string | string[] }>();
+  
+  const { saveQuizResult } = useQuizHistory();
+  
   const topicName = Array.isArray(topic) ? topic[0] : topic;
   const courseName = Array.isArray(course) ? course[0] : course;
   
-  const [questions, setQuestions] = useState<any[]>([]);
+  const { questions, loading } = useQuestions(courseName, topicName);
+  
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<any>({});
   const [dragData, setDragData] = useState<string[]>([]);
 
-  // 1. PINDAHKAN CALLBACK KE SINI (Sebelum return kondisional)
   const renderDragItem = useCallback(({ item, drag, isActive }: RenderItemParams<string>) => {
     return (
       <ScaleDecorator>
@@ -93,24 +46,32 @@ export default function QuizPlayScreen() {
   }, []);
 
   useEffect(() => {
-    const data = ALL_QUIZ_DATA[String(topicName)] || ALL_QUIZ_DATA['Huruf Kapital'];
-    setQuestions(data);
-  }, [topicName]);
-
-  useEffect(() => {
     if (questions.length > 0 && questions[currentIdx]?.type === 'drag-drop') {
-      setDragData(questions[currentIdx].dragItems);
-      // Simpan jawaban awal
+      const dragItems = questions[currentIdx].drag_items || [];
+      setDragData(dragItems);
       const questionId = questions[currentIdx].id;
-      setSelectedAnswers((prev: any) => ({ ...prev, [questionId]: questions[currentIdx].dragItems }));
+      setSelectedAnswers((prev: any) => ({ ...prev, [questionId]: dragItems }));
     }
   }, [currentIdx, questions]);
 
-  // 2. PINDAHKAN PENGECEKAN KONDISIONAL KE SINI (Setelah semua hook dipanggil)
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#6366F1" />
+        <Text style={{ color: 'white', marginTop: 10 }}>Memuat soal...</Text>
+      </View>
+    );
+  }
+
   if (questions.length === 0) {
     return (
-      <View style={styles.container}>
-        <Text style={{ color: 'white', textAlign: 'center', marginTop: 50 }}>Loading...</Text>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+        <Text style={{ color: 'white', textAlign: 'center', fontSize: 16 }}>
+          Belum ada soal untuk topik ini
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.nextBtn}>
+          <Text style={styles.nextBtnText}>Kembali</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -121,52 +82,59 @@ export default function QuizPlayScreen() {
     setSelectedAnswers((prev: any) => ({ ...prev, [currentQ.id]: ans }));
   };
 
-  const { saveQuizResult } = useQuizHistory();
-  
   const next = async () => {
-  if (currentIdx < questions.length - 1) {
-    setCurrentIdx(currentIdx + 1);
-  } else {
-    let score = 0;
-    const answers: any[] = [];
-    
-    questions.forEach(q => {
-      const isCorrect = JSON.stringify(selectedAnswers[q.id]) === JSON.stringify(q.correctAnswer);
-      if (isCorrect) score += (100 / questions.length);
+    if (currentIdx < questions.length - 1) {
+      setCurrentIdx(currentIdx + 1);
+    } else {
+      let score = 0;
+      const answers: any[] = [];
       
-      answers.push({
-        questionId: q.id,
-        userAnswer: JSON.stringify(selectedAnswers[q.id]),
-        correctAnswer: JSON.stringify(q.correctAnswer),
-        isCorrect
+      questions.forEach(q => {
+        const isCorrect = JSON.stringify(selectedAnswers[q.id]) === JSON.stringify(q.correct_answer);
+        if (isCorrect) score += (100 / questions.length);
+        
+        answers.push({
+          question_id: q.id,
+          user_answer: JSON.stringify(selectedAnswers[q.id]),
+          correct_answer: JSON.stringify(q.correct_answer),
+          is_correct: isCorrect
+        });
       });
-    });
 
-    const correctCount = answers.filter(a => a.isCorrect).length;
-    
-    try {
-      await saveQuizResult(
-        String(courseName),
-        String(topicName),
-        Math.round(score),
-        questions.length,
-        correctCount,
-        answers
-      );
-    } catch (error) {
-      console.error('Error saving quiz:', error);
+      const correctCount = answers.filter(a => a.is_correct).length;
+      
+      try {
+        await saveQuizResult(
+          String(courseName),
+          String(topicName),
+          Math.round(score),
+          questions.length,
+          correctCount,
+          null,
+          answers
+        );
+      } catch (error) {
+        console.log('Error saving quiz:', error);
+      }
+
+      router.push({
+        pathname: "/quiz/result",
+        params: {
+          score: Math.round(score),
+          topic: topicName,
+          course: courseName,
+        },
+      });
     }
+  };
 
-    router.push({
-      pathname: "/quiz/result",
-      params: {
-        score: Math.round(score),
-        topic: topicName,
-        course: courseName,
-      },
-    });
-  }
-};
+  // Get options for current question
+  const getOptions = () => {
+    if (currentQ.type === 'true-false') {
+      return ['Benar', 'Salah'];
+    }
+    return currentQ.options || [];
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -174,14 +142,18 @@ export default function QuizPlayScreen() {
         <LinearGradient colors={['#6366F1', '#4338CA']} style={styles.gradient}>
           <SafeAreaView style={{ flex: 1 }}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()}><ChevronLeft color="white" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => router.back()}>
+                <ChevronLeft color="white" />
+              </TouchableOpacity>
               <Text style={styles.headerTitle}>{topicName}</Text>
               <MoreVertical color="white" />
             </View>
 
             <View style={styles.quizInfo}>
               <Text style={styles.progressText}>Soal {currentIdx + 1}/{questions.length}</Text>
-              <View style={styles.badge}><Text style={styles.badgeText}>{currentQ.type.replace('-', ' ')}</Text></View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{currentQ.type.replace('-', ' ')}</Text>
+              </View>
             </View>
 
             <Text style={styles.questionText}>{currentQ.question}</Text>
@@ -189,7 +161,7 @@ export default function QuizPlayScreen() {
             <View style={styles.card}>
               {currentQ.type !== 'drag-drop' ? (
                 <View style={{ gap: 12 }}>
-                  {(currentQ.options || ['Benar', 'Salah']).map((opt: string, i: number) => (
+                  {getOptions().map((opt: string, i: number) => (
                     <TouchableOpacity 
                       key={i} 
                       onPress={() => handleSelect(opt)}
@@ -198,7 +170,9 @@ export default function QuizPlayScreen() {
                       <View style={[styles.radio, selectedAnswers[currentQ.id] === opt && styles.radioActive]}>
                         {selectedAnswers[currentQ.id] === opt && <View style={styles.radioInner} />}
                       </View>
-                      <Text style={[styles.optText, selectedAnswers[currentQ.id] === opt && styles.optTextActive]}>{opt}</Text>
+                      <Text style={[styles.optText, selectedAnswers[currentQ.id] === opt && styles.optTextActive]}>
+                        {opt}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -223,7 +197,9 @@ export default function QuizPlayScreen() {
                 disabled={!selectedAnswers[currentQ.id]}
                 style={[styles.nextBtn, !selectedAnswers[currentQ.id] && { opacity: 0.5 }]}
               >
-                <Text style={styles.nextBtnText}>{currentIdx === questions.length - 1 ? 'Selesai' : 'Lanjut'}</Text>
+                <Text style={styles.nextBtnText}>
+                  {currentIdx === questions.length - 1 ? 'Selesai' : 'Lanjut'}
+                </Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -233,6 +209,7 @@ export default function QuizPlayScreen() {
   );
 }
 
+// ...existing styles...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#4338CA' },
   gradient: { flex: 1 },
@@ -302,7 +279,6 @@ const styles = StyleSheet.create({
   optText: { color: '#475569', fontSize: 15 },
   optTextActive: { color: '#6366F1', fontWeight: 'bold' },
   
-  // --- BAGIAN YANG TADI HILANG ---
   dragHint: { 
     textAlign: 'center', 
     color: '#94A3B8', 
@@ -326,18 +302,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF', 
     borderColor: '#6366F1',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+      ios: { 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 2 }, 
+        shadowOpacity: 0.1, 
+        shadowRadius: 4 
+      },
       android: { elevation: 3 }
     })
   },
-  dragText: { color: '#1E293B', fontSize: 15, fontWeight: '500', flex: 1, marginLeft: 10 },
+  dragText: { 
+    color: '#1E293B', 
+    fontSize: 15, 
+    fontWeight: '500', 
+    flex: 1, 
+    marginLeft: 10 
+  },
   dragHandleIndicator: { 
     width: 4, 
     height: 20, 
     borderRadius: 2, 
     backgroundColor: '#E2E8F0' 
   },
-  // -------------------------------
 
   nextBtn: { 
     backgroundColor: '#6366F1', 

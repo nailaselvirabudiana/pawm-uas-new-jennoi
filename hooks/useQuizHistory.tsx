@@ -1,32 +1,44 @@
-import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useEffect, useState } from 'react';
 
-export interface QuizHistoryItem {
+export interface QuizHistory {
   id: string;
-  topic: string;
+  user_id: string;
   course: string;
+  topic: string;
   score: number;
-  date: string;
-  time: string;
-  duration: string;
-  totalQuestions: number;
-  correctAnswers: number;
+  total_questions: number;
+  correct_answers: number;
+  duration: string | null;
   completed_at: string;
+}
+
+export interface QuizAnswer {
+  id: string;
+  quiz_history_id: string;
+  question_id: string;
+  user_answer: string;
+  correct_answer: string;
+  is_correct: boolean;
+  created_at: string;
 }
 
 export function useQuizHistory() {
   const { user } = useAuth();
-  const [history, setHistory] = useState<QuizHistoryItem[]>([]);
+  const [quizHistory, setQuizHistory] = useState<QuizHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchHistory();
+      fetchQuizHistory();
+    } else {
+      setQuizHistory([]);
+      setLoading(false);
     }
   }, [user]);
 
-  const fetchHistory = async () => {
+  const fetchQuizHistory = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -36,26 +48,9 @@ export function useQuizHistory() {
         .order('completed_at', { ascending: false });
 
       if (error) throw error;
-
-      const formatted = data.map((item) => ({
-        id: item.id,
-        topic: item.topic,
-        course: item.course,
-        score: item.score,
-        date: new Date(item.completed_at).toLocaleDateString('id-ID'),
-        time: new Date(item.completed_at).toLocaleTimeString('id-ID', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        duration: item.duration || '-',
-        totalQuestions: item.total_questions,
-        correctAnswers: item.correct_answers,
-        completed_at: item.completed_at,
-      }));
-
-      setHistory(formatted);
+      setQuizHistory(data || []);
     } catch (error) {
-      console.error('Error fetching quiz history:', error);
+      console.log('Error fetching quiz history:', error);
     } finally {
       setLoading(false);
     }
@@ -67,18 +62,19 @@ export function useQuizHistory() {
     score: number,
     totalQuestions: number,
     correctAnswers: number,
+    duration: string | null,
     answers: Array<{
-      questionId: number;
-      userAnswer: string;
-      correctAnswer: string;
-      isCorrect: boolean;
+      question_id: number;
+      user_answer: string;
+      correct_answer: string;
+      is_correct: boolean;
     }>
   ) => {
     try {
-      if (!user) throw new Error('No user');
+      if (!user) throw new Error('User not authenticated');
 
-      // Insert quiz history
-      const { data: quizHistory, error: historyError } = await supabase
+      // Save quiz history
+      const { data: historyData, error: historyError } = await supabase
         .from('quiz_history')
         .insert({
           user_id: user.id,
@@ -87,39 +83,76 @@ export function useQuizHistory() {
           score,
           total_questions: totalQuestions,
           correct_answers: correctAnswers,
-          duration: '-', // You can calculate this
+          duration,
         })
         .select()
         .single();
 
       if (historyError) throw historyError;
 
-      // Insert detailed answers
-      const answersData = answers.map((ans) => ({
-        quiz_history_id: quizHistory.id,
-        question_id: ans.questionId,
-        user_answer: ans.userAnswer,
-        correct_answer: ans.correctAnswer,
-        is_correct: ans.isCorrect,
+      // Save quiz answers
+      const answersToInsert = answers.map(answer => ({
+        quiz_history_id: historyData.id,
+        question_id: answer.question_id,
+        user_answer: answer.user_answer,
+        correct_answer: answer.correct_answer,
+        is_correct: answer.is_correct,
       }));
 
       const { error: answersError } = await supabase
         .from('quiz_answers')
-        .insert(answersData);
+        .insert(answersToInsert);
 
       if (answersError) throw answersError;
 
-      await fetchHistory();
+      await fetchQuizHistory();
+      return historyData;
     } catch (error) {
-      console.error('Error saving quiz result:', error);
+      console.log('Error saving quiz result:', error);
       throw error;
     }
   };
 
+  const getQuizAnswers = async (quizHistoryId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('quiz_answers')
+        .select('*')
+        .eq('quiz_history_id', quizHistoryId)
+        .order('question_id', { ascending: true });
+
+      if (error) throw error;
+      return data as QuizAnswer[];
+    } catch (error) {
+      console.log('Error fetching quiz answers:', error);
+      return [];
+    }
+  };
+
+  const getCategoryStats = (course: string, topic: string) => {
+    const categoryQuizzes = quizHistory.filter(
+      q => q.course === course && q.topic === topic
+    );
+    if (categoryQuizzes.length === 0) return null;
+
+    const totalScore = categoryQuizzes.reduce((sum, q) => sum + q.score, 0);
+    const avgScore = totalScore / categoryQuizzes.length;
+    const bestScore = Math.max(...categoryQuizzes.map(q => q.score));
+    
+    return {
+      totalAttempts: categoryQuizzes.length,
+      averageScore: Math.round(avgScore),
+      bestScore,
+      lastAttempt: categoryQuizzes[0],
+    };
+  };
+
   return {
-    history,
+    quizHistory,
     loading,
     saveQuizResult,
-    refreshHistory: fetchHistory,
+    getQuizAnswers,
+    getCategoryStats,
+    refreshHistory: fetchQuizHistory,
   };
 }
