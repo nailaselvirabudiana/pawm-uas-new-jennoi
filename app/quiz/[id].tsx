@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,15 +7,16 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
+  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, CheckCircle, XCircle, Clock, Calendar } from 'lucide-react-native';
+import { useQuizHistory } from '@/hooks/useQuizHistory';
 
 const { width } = Dimensions.get('window');
 
-// Interface sama seperti yang Anda sediakan
 interface QuizAnswer {
   questionId: number;
   question: string;
@@ -27,33 +28,48 @@ interface QuizAnswer {
   options?: string[];
 }
 
+interface QuizDetail {
+  id: string;
+  topic: string;
+  course: string;
+  score: number;
+  completed_at: string;
+  total_questions: number;
+  correct_answers: number;
+  answers: QuizAnswer[];
+}
+
 export default function QuizDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { getQuizDetail } = useQuizHistory();
+  
+  const [quizData, setQuizData] = useState<QuizDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // MOCK DATA: Dalam aplikasi nyata, Anda akan mengambil data berdasarkan 'id' dari params
-  const quizData = {
-    id: id as string,
-    topic: 'Huruf Kapital',
-    course: 'Ejaan',
-    score: 80,
-    date: '02 Jan 2026',
-    time: '20:15',
-    totalQuestions: 5,
-    correctAnswers: 4,
-    answers: [
-      {
-        questionId: 1,
-        question: 'Manakah penulisan huruf kapital yang benar?',
-        type: 'multiple-choice',
-        userAnswer: 'Saya tinggal di Jakarta',
-        correctAnswer: 'Saya tinggal di Jakarta',
-        isCorrect: true,
-        explanation: 'Huruf pertama pada nama kota harus menggunakan huruf kapital.',
-        options: ['saya tinggal di jakarta', 'Saya tinggal di Jakarta', 'saya Tinggal di jakarta']
-      } as QuizAnswer,
-      // ... tambahkan soal lainnya
-    ]
+  useEffect(() => {
+    loadQuizDetail();
+  }, [id]);
+
+  const loadQuizDetail = async () => {
+    try {
+      setLoading(true);
+      const data = await getQuizDetail(id as string);
+      if (data) {
+        // Format tanggal
+        const date = new Date(data.completed_at);
+        const formattedData = {
+          ...data,
+          date: date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+          time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        };
+        setQuizData(formattedData);
+      }
+    } catch (error) {
+      console.error('Error loading quiz detail:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getGradeColors = (score: number): [string, string] => {
@@ -63,6 +79,25 @@ export default function QuizDetailScreen() {
     if (score >= 60) return ['#FB923C', '#F87171'];
     return ['#F87171', '#EC4899'];
   };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
+
+  if (!quizData) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ textAlign: 'center', color: '#64748B' }}>Data tidak ditemukan</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20 }}>
+          <Text style={{ color: '#6366F1' }}>Kembali</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const currentColors = getGradeColors(quizData.score);
 
@@ -104,7 +139,7 @@ export default function QuizDetailScreen() {
             <View style={styles.scoreInfo}>
               <Text style={styles.scoreLabel}>Jawaban Benar</Text>
               <Text style={styles.scoreValue}>
-                {quizData.correctAnswers}/{quizData.totalQuestions}
+                {quizData.correct_answers}/{quizData.total_questions}
               </Text>
             </View>
           </View>
@@ -151,7 +186,7 @@ export default function QuizDetailScreen() {
                 {/* Options Logic */}
                 {(answer.type === 'multiple-choice' || answer.type === 'true-false') && (
                   <View style={styles.optionsList}>
-                    {(answer.options || ['Benar', 'Salah']).map((option, idx) => {
+                    {(answer.options || ['Benar', 'Salah']).map((option: string, idx: number) => {
                       const isUserAns = option === answer.userAnswer;
                       const isCorrectAns = option === answer.correctAnswer;
                       

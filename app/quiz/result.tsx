@@ -7,8 +7,6 @@ import { Dimensions, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacit
 
 const { width } = Dimensions.get('window');
 
-// Tambahkan import ini di bagian atas
-
 export default function QuizResultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{

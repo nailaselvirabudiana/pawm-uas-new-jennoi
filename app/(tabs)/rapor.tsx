@@ -1,5 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
@@ -15,6 +13,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   SafeAreaView,
   ScrollView,
@@ -23,57 +22,58 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useQuizHistory } from '@/hooks/useQuizHistory';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
-interface QuizHistoryItem {
-  id: string;
-  topic: string;
-  course: string;
-  score: number;
-  date: string;
-  time: string;
-  totalQuestions: number;
-  correctAnswers: number;
-}
-
 export default function RaporScreen() {
   const router = useRouter();
-  const isFocused = useIsFocused();
-  const [quizHistory, setQuizHistory] = useState<QuizHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Mengambil data dari memori lokal HP
-  const loadHistory = async () => {
-    try {
-      setLoading(true);
-      const data = await AsyncStorage.getItem('quiz_history');
-      if (data) {
-        setQuizHistory(JSON.parse(data));
-      } else {
-        setQuizHistory([]);
-      }
-    } catch (e) {
-      console.error("Gagal memuat riwayat", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { quizHistory, loading, refreshHistory } = useQuizHistory();
 
   useEffect(() => {
-    if (isFocused) {
-      loadHistory();
-    }
-  }, [isFocused]);
+    refreshHistory();
+  }, []);
 
   // Fungsi hapus semua riwayat
   const clearHistory = async () => {
-    try {
-      await AsyncStorage.removeItem('quiz_history');
-      setQuizHistory([]);
-    } catch (e) {
-      console.error("Gagal menghapus riwayat", e);
-    }
+    Alert.alert(
+      'Hapus Semua Riwayat',
+      'Yakin ingin menghapus semua riwayat kuis?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) return;
+
+              // Hapus semua quiz_answers untuk user ini
+              await supabase
+                .from('quiz_answers')
+                .delete()
+                .in('quiz_history_id', 
+                  quizHistory.map(q => q.id)
+                );
+
+              // Hapus semua quiz_history untuk user ini
+              await supabase
+                .from('quiz_history')
+                .delete()
+                .eq('user_id', user.id);
+
+              // Refresh data
+              await refreshHistory();
+            } catch (error) {
+              console.error('Error clearing history:', error);
+              Alert.alert('Error', 'Gagal menghapus riwayat');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getGradeColors = (score: number): [string, string] => {
@@ -94,6 +94,23 @@ export default function RaporScreen() {
   };
 
   const stats = calculateStats();
+
+  // Format data untuk display
+  const formattedHistory = quizHistory.map(quiz => {
+    const date = new Date(quiz.completed_at);
+    return {
+      ...quiz,
+      date: date.toLocaleDateString('id-ID', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      }),
+      time: date.toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+    };
+  });
 
   if (loading) {
     return (
@@ -137,7 +154,7 @@ export default function RaporScreen() {
         </LinearGradient>
 
         <View style={styles.historySection}>
-          {quizHistory.length === 0 ? (
+          {formattedHistory.length === 0 ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconBox}>
                 <ClipboardList size={48} color="#CBD5E1" />
@@ -147,22 +164,10 @@ export default function RaporScreen() {
             </View>
           ) : (
             <View style={styles.cardGap}>
-              {quizHistory.map((quiz) => (
+              {formattedHistory.map((quiz) => (
                 <TouchableOpacity
                   key={quiz.id}
                   activeOpacity={0.8}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/quiz/result',
-                      params: {
-                        id: quiz.id,
-                        score: String(quiz.score),
-                        topic: quiz.topic,
-                        course: quiz.course,
-                        fromHistory: '1',
-                      },
-                    })
-                  }
                   style={styles.quizCard}
                 >
                   <View style={styles.cardHeader}>
@@ -189,24 +194,35 @@ export default function RaporScreen() {
 
                   <View style={styles.progressRow}>
                     <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${quiz.score}%`, backgroundColor: getGradeColors(quiz.score)[0] }]} />
+                      <View style={[styles.progressBarFill, { 
+                        width: `${quiz.score}%`, 
+                        backgroundColor: getGradeColors(quiz.score)[0] 
+                      }]} />
                     </View>
-                    <Text style={styles.progressFraction}>{quiz.correctAnswers + "/" + quiz.totalQuestions}</Text>
+                    <Text style={styles.progressFraction}>
+                      {quiz.correct_answers}/{quiz.total_questions}
+                    </Text>
                   </View>
 
                   <View style={styles.cardFooter}>
-                    <View style={[styles.statusBadge, { backgroundColor: quiz.score >= 70 ? '#DCFCE7' : '#FEE2E2' }]}>
-                      <Text style={[styles.statusBadgeText, { color: quiz.score >= 70 ? '#15803D' : '#B91C1C' }]}>
+                    <View style={[
+                      styles.statusBadge, 
+                      { backgroundColor: quiz.score >= 70 ? '#DCFCE7' : '#FEE2E2' }
+                    ]}>
+                      <Text style={[
+                        styles.statusBadgeText, 
+                        { color: quiz.score >= 70 ? '#15803D' : '#B91C1C' }
+                      ]}>
                         {quiz.score >= 70 ? 'LULUS' : 'GAGAL'}
                       </Text>
                     </View>
                     <View style={styles.footerActions}>
                       <TouchableOpacity
                         activeOpacity={0.85}
-                        onPress={(e) => {
-                          e.stopPropagation?.();
-                          router.push({ pathname: '/quiz/[id]', params: { id: quiz.id } });
-                        }}
+                        onPress={() => router.push({ 
+                          pathname: '/quiz/[id]', 
+                          params: { id: quiz.id } 
+                        })}
                         style={styles.reviewBtn}
                       >
                         <Text style={styles.reviewBtnText}>Lihat Pembahasan</Text>

@@ -64,7 +64,7 @@ export function useQuizHistory() {
     correctAnswers: number,
     duration: string | null,
     answers: Array<{
-      question_id: number;
+      question_id: string;
       user_answer: string;
       correct_answer: string;
       is_correct: boolean;
@@ -147,11 +147,64 @@ export function useQuizHistory() {
     };
   };
 
+  const getQuizDetail = async (quizHistoryId: string) => {
+    try {
+      // 1. Ambil data quiz history
+      const { data: historyData, error: historyError } = await supabase
+        .from('quiz_history')
+        .select('*')
+        .eq('id', quizHistoryId)
+        .single();
+
+      if (historyError) throw historyError;
+
+      // 2. Ambil semua jawaban dari quiz ini
+      const { data: answersData, error: answersError } = await supabase
+        .from('quiz_answers')
+        .select('*')
+        .eq('quiz_history_id', quizHistoryId);
+
+      if (answersError) throw answersError;
+
+      // 3. Ambil detail pertanyaan untuk setiap jawaban
+      const detailedAnswers = await Promise.all(
+        answersData.map(async (answer) => {
+          const { data: questionData } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('id', answer.question_id)
+            .single();
+
+          return {
+            questionId: answer.question_id,
+            question: questionData?.question || '',
+            type: questionData?.type || 'multiple-choice',
+            userAnswer: JSON.parse(answer.user_answer),
+            correctAnswer: JSON.parse(answer.correct_answer),
+            isCorrect: answer.is_correct,
+            explanation: questionData?.explanation || 'Tidak ada pembahasan tersedia.',
+            options: questionData?.options || null,
+            dragItems: questionData?.drag_items || null,
+          };
+        })
+      );
+
+      return {
+        ...historyData,
+        answers: detailedAnswers,
+      };
+    } catch (error) {
+      console.error('Error fetching quiz detail:', error);
+      return null;
+    }
+  };
+
   return {
     quizHistory,
     loading,
     saveQuizResult,
     getQuizAnswers,
+    getQuizDetail,
     getCategoryStats,
     refreshHistory: fetchQuizHistory,
   };
