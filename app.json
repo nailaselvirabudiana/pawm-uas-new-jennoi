@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "pawm-uas-new-jennoi",
+    "name": "TaBa",
     "slug": "pawm-uas-new-jennoi",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,15 +9,16 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jennifersandy.pawmuasnewjennoi"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/avatar.png"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "package": "com.jennifersandy.pawmuasnewjennoi",
+      "versionCode": 2
     },
     "web": {
       "output": "static",
@@ -28,19 +29,20 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/avatar.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#ffffff"
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0945b746-3229-48d2-9776-a0f90b57cf0c"
+      }
     }
   }
 }
